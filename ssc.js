@@ -5,11 +5,6 @@ var iniparser = require('iniparser');
 
 var config;
 
-iniparser.parse('./ssc.conf', function(err,data){
-    config = data;
-});
-
-
 var browser = mdns.createBrowser(mdns.tcp('googlecast'));
 
 browser.on('serviceUp', function(service) {
@@ -18,9 +13,28 @@ browser.on('serviceUp', function(service) {
   browser.stop();
 });
 
-browser.start();
+
+
+
+
+iniparser.parse('./ssc.conf', function(err,data){
+	if (err) {
+		console.error("Could not read config file: " + err);
+		exit(0);
+	} else {
+	    config = data;
+    	console.log("Read in config file");
+    	console.log(config);
+    	browser.start();
+	}
+});
+
+
+
+
 
 function ondeviceup(host) {
+console.log(config);
 
   var client = new Client();
 
