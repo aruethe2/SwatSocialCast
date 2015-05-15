@@ -113,6 +113,12 @@ function onConnect(address) {
 
       player.on('status', function(status) {
         console.log('status broadcast playerState=%s', status.playerState);
+        if (status.playerState == "IDLE") {
+        	console.log("Play it again . . ."); 
+        	player.seek(0, function(err, status) {
+            	player.play();
+            });
+        }
       });
 
       console.log('app "%s" launched, loading media %s ...', player.session.displayName, media.contentId);
