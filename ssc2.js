@@ -100,6 +100,13 @@ function onConnect(address) {
       };
     });
 
+	 player.load(media, { autoplay: true }, function(err, status) {
+        console.log('media loaded playerState=%s', status.playerState);
+		if (err) {
+			console.log(util.inspect(err, {depth:null, colors:true}));	   	
+		}
+      });
+
 
 
 
