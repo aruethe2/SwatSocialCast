@@ -124,8 +124,6 @@ function onConnect(address) {
 
     });
 
-  });
-
 
     client.on("status", function(status) {
     	console.log("Got status from chromecast at %s" , address);
