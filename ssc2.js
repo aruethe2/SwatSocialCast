@@ -1,4 +1,5 @@
 var Client = require('castv2-client').Client;
+var DefaultMediaReceiver  = require('castv2-client').DefaultMediaReceiver;
 var Searcher = require('node-ssdp').Client
 var iniparser = require('iniparser');
 var util = require("util");
@@ -89,18 +90,27 @@ function onConnect(address) {
       });
     }
 
+
+    client.launch(DefaultMediaReceiver, function(err, player) {
+      var media = {
+        // Here you can plug an URL to any mp4, webm, mp3 or jpg file with the proper contentType.
+        contentId: config.app.video,
+        contentType: 'video/mp4',
+        streamType: 'BUFFERED', // or LIVE      
+      };
+
+
+
+
     client.on("status", function(status) {
     	console.log("Got status from chromecast at %s" , address);
-      syncApp((status && status.applications && status.applications[0]) || {});
+      //syncApp((status && status.applications && status.applications[0]) || {});
       
     });
+  
     
-    client.on("error", function(err) {
-    
-    
-    	console.log(util.inspect(err, {depth:null, colors:true}));
-    	
-    	
+    client.on("error", function(err) {  
+    	console.log(util.inspect(err, {depth:null, colors:true}));	   	
     	if (err.code == "ECONNRESET") {
     		console.log("Connection reset for chromecast at " + address);
     	} else if (err.code == "EHOSTUNREACH") {
@@ -115,7 +125,7 @@ function onConnect(address) {
     	}
     
     	// When there is an error, remove the address from the list of chromecast addresses
-    	remove_chromecast_from_list(address); 	
+    	client.close(); 	
     });
 
 
