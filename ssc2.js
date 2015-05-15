@@ -93,21 +93,28 @@ function onConnect(address) {
 
     client.launch(DefaultMediaReceiver, function(err, player) {
       var media = {
+
         // Here you can plug an URL to any mp4, webm, mp3 or jpg file with the proper contentType.
         contentId: config.app.video,
         contentType: 'video/mp4',
-        streamType: 'BUFFERED', // or LIVE      
+        streamType: 'BUFFERED', // or LIVE
+      
       };
-    });
 
-	 player.load(media, { autoplay: true }, function(err, status) {
-        console.log('media loaded playerState=%s', status.playerState);
-		if (err) {
-			console.log(util.inspect(err, {depth:null, colors:true}));	   	
-		}
+      player.on('status', function(status) {
+        console.log('status broadcast playerState=%s', status.playerState);
       });
 
+      console.log('app "%s" launched, loading media %s ...', player.session.displayName, media.contentId);
 
+      player.load(media, { autoplay: true }, function(err, status) {
+        console.log('media loaded playerState=%s', status.playerState);
+
+      });
+
+    });
+
+  });
 
 
     client.on("status", function(status) {
