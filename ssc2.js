@@ -98,8 +98,18 @@ function onConnect(address) {
         contentId: config.app.video,
         contentType: 'video/mp4',
         streamType: 'BUFFERED', // or LIVE
-      
+        
+                // Title and cover displayed while buffering
+        metadata: {
+          type: 0,
+          metadataType: 0,
+          title: "Big Buck Bunny", 
+          images: [
+            { url: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg' }
+          ]
+        }        
       };
+      
 
       player.on('status', function(status) {
         console.log('status broadcast playerState=%s', status.playerState);
