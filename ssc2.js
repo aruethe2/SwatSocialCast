@@ -98,6 +98,7 @@ function onConnect(address) {
         contentType: 'video/mp4',
         streamType: 'BUFFERED', // or LIVE      
       };
+    }
 
 
 
