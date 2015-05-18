@@ -29,7 +29,7 @@ iniparser.parse('./ssc.conf', function(err,data) {
     	console.log("Read in config file");
     	console.log(config);
     	
-    	syncAppId = config.app.appid; 
+    	syncAppId = config.app.appid11; 
     	
     	searchInterval = setInterval(function() {
     	
@@ -51,7 +51,7 @@ iniparser.parse('./ssc.conf', function(err,data) {
 			console.log("%d Known chromecasts: %s", chromecast_list.length, chromecast_list.join(", "));
 			console.log("Searching for chromecasts");
 			
-    		searcher.search('urn:dial-multiscreen-org:service:dial:1');}, 5000);
+    		searcher.search('urn:dial-multiscreen-org:service:dial:1');}, 2000);
 
 	}
 });
@@ -66,32 +66,34 @@ function onConnect(address) {
   var client = new Client();
 
   client.connect(address, function() {
-    var receiver = client.receiver;
+    	
+	var receiver = client.receiver;
     
+	// Keep track of list of active Chromecasts
 	chromecast_list.push(address);
 	chromecast_list = _und.uniq(chromecast_list);  // Remove any duplicates
 
+	function syncApp(app) {
+      		if(syncApp.launching || app.appId == syncAppId) return;
+      		console.log('Current app on %s is: %s', address, app.appId);
+      		syncApp.launching = true;
 
-    function syncApp(app) {
-      if(syncApp.launching || app.appId === syncAppId) return;
+      		console.log("Restoring %s to default app: %s...", app.name, syncAppId);
+      		if(app.sessionId) {
+        		receiver.stop(app.sessionId, function(err, apps) {
+          			console.log(apps);
+        		});
+      		}
 
-      syncApp.launching = true;
-
-      console.log("Restoring %s to default app: %s...", app.name, syncAppId);
-      if(app.sessionId) {
-        receiver.stop(app.sessionId, function(err, apps) {
-          console.log(apps);
-        });
-      }
-
-      receiver.launch(syncAppId, function(err, response) {
-        syncApp.launching = false;
-      });
-    }
+      		receiver.launch(syncAppId, function(err, response) {
+        		syncApp.launching = false;
+      		});
+    	}
 
     client.on("status", function(status) {
     	console.log("Got status from chromecast at %s" , address);
-      syncApp((status && status.applications && status.applications[0]) || {});
+      	console.log(status);
+	setTimeout(function() {syncApp((status && status.applications && status.applications[0]) || {})}, 2000);
       
     });
     
