@@ -3,6 +3,9 @@ var Searcher = require('node-ssdp').Client
 var iniparser = require('iniparser');
 var util = require("util");
 var _und = require("underscore");
+var parseString = require('xml2js').parseString;
+var request = require("request");
+var util =  require("util");
 
 var config;
 var syncAppId;
@@ -19,39 +22,58 @@ var chromecast_list = [];
 iniparser.parse('./ssc.conf', function(err,data) {
 
 	if (err) {
-	
+
 		console.error("Could not read config file: " + err);
 		exit(0);
-		
+
 	} else {
-	
-	    config = data;
-    	console.log("Read in config file");
-    	console.log(config);
-    	
-    	syncAppId = config.app.appid11; 
-    	
-    	searchInterval = setInterval(function() {
-    	
-    		if (searcher) {
-    			searcher._stop();
-    		}
-    		
-    		searcher = new Searcher();
+
+		config = data;
+		console.log("Read in config file");
+		console.log(config);
+
+		syncAppId = config.app.appid11;
+
+		searchInterval = setInterval(function() {
+
+			if (searcher) {
+				searcher._stop();
+			}
+
+			searcher = new Searcher();
 
 			searcher.on('response', function (headers, statusCode, rinfo) {
-			  
-			  if  (!pause_search && chromecast_list.indexOf(rinfo.address) < 0) {  
-			    console.log('Found chromecast running on address', rinfo.address);
-			  	onConnect(rinfo.address);
-			  }
-			  //searcher._stop();
+
+				if  (!pause_search && chromecast_list.indexOf(rinfo.address) < 0) {
+					console.log('Found chromecast running on address', rinfo.address);
+					//console.log(headers.LOCATION);
+					//console.log(rinfo);
+					request(headers.LOCATION, function(error, response, body) {
+						//console.log(body);
+						parseString(body, function(err, result) {
+							if (err) {
+								console.log("Cannot parse %s Chromecast headers: %s", rinfo.address, err);
+							} else {
+								var name = result.root.device[0].friendlyName[0];
+								if (name !== null && name !== 'undefined' && name !== '') {
+									onConnect(rinfo.address, name);
+								}
+							}
+
+						});
+					}).on('error', function(e) {
+						console.log("Error getting  %s Chromecast details: %s", rinfo.address, e.message);
+					});
+				}
+				//searcher._stop();
 			});
-			
+
 			console.log("%d Known chromecasts: %s", chromecast_list.length, chromecast_list.join(", "));
 			console.log("Searching for chromecasts");
-			
-    		searcher.search('urn:dial-multiscreen-org:service:dial:1');}, 2000);
+
+			searcher.search('urn:dial-multiscreen-org:service:dial:1');
+
+		}, 2000);
 
 	}
 });
@@ -61,48 +83,62 @@ iniparser.parse('./ssc.conf', function(err,data) {
 
 
 
-function onConnect(address) {
+function onConnect(address, name) {
 
   var client = new Client();
+  console.log("Creating new Chromecast connection: %s (%s)", name, address); 
+
+       // Keep track of list of active Chromecasts
+        chromecast_list.push(address);
+        chromecast_list = _und.uniq(chromecast_list);  // Remove any duplicates
+
+
+
+  console.log("List from Chromecasts: %s", chromecast_list.join(", "));
 
   client.connect(address, function() {
-    	
+
 	var receiver = client.receiver;
-    
-	// Keep track of list of active Chromecasts
-	chromecast_list.push(address);
-	chromecast_list = _und.uniq(chromecast_list);  // Remove any duplicates
+	var chromecast_name = name;
 
 	function syncApp(app) {
-      		if(syncApp.launching || app.appId == syncAppId) return;
-      		console.log('Current app on %s is: %s', address, app.appId);
-      		syncApp.launching = true;
+		console.log('syncApp called for %s (%s)', chromecast_name, address);
+		console.log(app);
 
-      		console.log("Restoring %s to default app: %s...", app.name, syncAppId);
-      		if(app.sessionId) {
-        		receiver.stop(app.sessionId, function(err, apps) {
-          			console.log(apps);
-        		});
-      		}
+		if(syncApp.launching || app.appId == syncAppId) return;
+		console.log('Current app on %s is: %s', chromecast_name, app.appId);
+		syncApp.launching = true;
 
-      		receiver.launch(syncAppId, function(err, response) {
-        		syncApp.launching = false;
-      		});
-    	}
+		console.log("Restoring %s to default app %s on %s", app.name, syncAppId, chromecast_name);
+		if(app.sessionId) {
+			receiver.stop(app.sessionId, function(err, apps) {
+				console.log(apps);
+			});
+		}
+
+		console.log('Launching app on %s (%s)', chromecast_name, address);
+		receiver.launch(syncAppId, function(err, response) {
+			if (err) {
+				console.log('Error launching app on %s (%s)', chromecast_name, address);
+				console.log(err);
+			} else {
+				console.log('App launched on %s (%s)', chromecast_name, address);
+				console.log(response);
+			}
+			// Give Chromecast app some time to relaunch
+			setTimeout(function() {syncApp.launching = false;}, 8000);
+		});
+	}
 
     client.on("status", function(status) {
-    	console.log("Got status from chromecast at %s" , address);
-      	console.log(status);
-	setTimeout(function() {syncApp((status && status.applications && status.applications[0]) || {})}, 2000);
-      
+	console.log("Got status from chromecast %s (%s)" , chromecast_name, address);
+	console.log(status);
+	syncApp((status && status.applications && status.applications[0]) || {});
     });
-    
+
     client.on("error", function(err) {
-    
-    
-    	console.log(util.inspect(err, {depth:null, colors:true}));
-    	
-    	
+	console.log(util.inspect(err, {depth:null, colors:true}));
+
     	if (err.code == "ECONNRESET") {
     		console.log("Connection reset for chromecast at " + address);
     	} else if (err.code == "EHOSTUNREACH") {
@@ -124,7 +160,7 @@ function onConnect(address) {
 	client.on("close", function() {
 		// When closing a connection, remove the address from the list of chromecast addresses
 		remove_chromecast_from_list(address) 
-		console.log("Closing connection to chromecast at %s", address);
+		console.log("Closing connection to %s (%s)", chromecast_name, address);
 	});
 
     client.getStatus(function(err, status) {
