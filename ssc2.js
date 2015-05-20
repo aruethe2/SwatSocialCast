@@ -32,8 +32,6 @@ iniparser.parse('./ssc.conf', function(err,data) {
 		console.log("Read in config file");
 		console.log(config);
 
-		syncAppId = config.app.appid11;
-
 		searchInterval = setInterval(function() {
 
 			if (searcher) {
@@ -93,13 +91,29 @@ function onConnect(address, name) {
         chromecast_list = _und.uniq(chromecast_list);  // Remove any duplicates
 
 
-
+ 
   console.log("List from Chromecasts: %s", chromecast_list.join(", "));
 
   client.connect(address, function() {
 
 	var receiver = client.receiver;
 	var chromecast_name = name;
+	var syncAppId = config.app.appid11; // default
+
+	if (chromecast_name == "SwatSocialCast") {
+		syncAppId = config.app.appid;
+	} else if (chromecast_name == "SwatSocialCast2") {
+		syncAppId = config.app.appid11;
+	} else if (chromecast_name == "SwatSocialCast3") {
+		syncAppId = config.app.appid4;
+	} else if (chromecast_name == "SwatSocialCast4") {
+		syncAppId = config.app.appid5;
+	} else if (chromecast_name == "SwatSocialCast5") {
+		syncAppId = config.app.appid7;
+	} else {
+		syncAppId = config.app.appid11;
+	}
+
 
 	function syncApp(app) {
 		console.log('syncApp called for %s (%s)', chromecast_name, address);
